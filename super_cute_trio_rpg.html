@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Super Cute Trio RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .touch-btn:active {
+            transform: scale(0.92);
+        }
+
+        canvas {
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between items-center text-white relative bg-slate-950 select-none overflow-hidden">
+
+    <!-- Top UI Bar -->
+    <div class="w-full max-w-4xl p-3 z-10 flex flex-wrap items-center justify-between gap-2 glass-panel rounded-b-2xl shadow-2xl">
+        <!-- Party Character Switches -->
+        <div class="flex items-center space-x-2">
+            <span class="text-xs uppercase font-bold tracking-wider text-emerald-400 hidden sm:inline">Active Hero (1,2,3):</span>
+            
+            <button id="btn-kitty" onclick="switchCharacter('kitty')" class="char-btn border-2 border-pink-400 bg-pink-900/60 hover:bg-pink-800 p-1.5 px-3 rounded-xl flex items-center space-x-2 transition shadow-lg">
+                <span class="text-lg">🎀</span>
+                <div class="text-left leading-tight">
+                    <div class="text-xs font-bold text-pink-200">Hello Kitty</div>
+                </div>
+            </button>
+
+            <button id="btn-pusheen" onclick="switchCharacter('pusheen')" class="char-btn border-2 border-slate-500 bg-slate-800/60 hover:bg-slate-700 p-1.5 px-3 rounded-xl flex items-center space-x-2 transition opacity-60">
+                <span class="text-lg">🐾</span>
+                <div class="text-left leading-tight">
+                    <div class="text-xs font-bold text-slate-200">Pusheen</div>
+                </div>
+            </button>
+
+            <button id="btn-hei" onclick="switchCharacter('hei')" class="char-btn border-2 border-emerald-500 bg-emerald-950/60 hover:bg-emerald-900 p-1.5 px-3 rounded-xl flex items-center space-x-2 transition opacity-60">
+                <span class="text-lg">🐱</span>
+                <div class="text-left leading-tight">
+                    <div class="text-xs font-bold text-emerald-200">Hei</div>
+                </div>
+            </button>
+        </div>
+
+        <!-- Stats & Inventory -->
+        <div class="flex items-center space-x-4">
+            <!-- HP Bar -->
+            <div class="flex flex-col w-28 sm:w-36">
+                <div class="flex justify-between text-[11px] font-bold mb-0.5">
+                    <span id="active-name" class="text-pink-300">Hello Kitty</span>
+                    <span id="hp-text" class="text-emerald-400">120/120</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                    <div id="hp-bar-inner" class="h-full bg-emerald-500 transition-all duration-200" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Weapon Selector & Laser Cooldown Indicator -->
+            <div class="flex items-center space-x-2 bg-slate-900/80 border border-slate-700 px-2.5 py-1 rounded-xl">
+                <span class="text-[11px] text-slate-400 font-bold uppercase hidden sm:inline">Equipped:</span>
+                <button id="btn-weapon-std" onclick="setWeapon('standard')" class="px-2 py-0.5 text-xs font-bold rounded bg-pink-600 text-white shadow">Normal Sword</button>
+                <button id="btn-weapon-pen" onclick="setWeapon('pen')" class="px-2 py-0.5 text-xs font-bold rounded bg-cyan-700 text-cyan-100 opacity-70 hover:opacity-100">Nana's Pen 🖊️</button>
+                <button id="btn-weapon-redowan" onclick="setWeapon('redowan')" class="px-2 py-0.5 text-xs font-bold rounded bg-purple-900 text-purple-200 border border-purple-500 opacity-70 hover:opacity-100">Redowan's (100 DMG)</button>
+                <div id="laser-cd-box" class="hidden flex flex-col items-center justify-center text-[10px] pl-1 border-l border-slate-700">
+                    <span class="text-cyan-300 font-bold">🖊️ Laser (R-Click / E)</span>
+                    <div class="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-cyan-700 mt-0.5">
+                        <div id="laser-cd-bar" class="h-full bg-cyan-400 transition-all duration-100" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score / Level / Sushi -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-950/60 border border-amber-500/40 px-2.5 py-1 rounded-xl text-xs font-bold text-amber-300">
+                    Stage <span id="level-num" class="text-white text-sm">1</span>
+                </div>
+                <div class="flex items-center space-x-1.5 bg-red-950/60 border border-red-500/30 px-3 py-1 rounded-xl">
+                    <span class="text-lg">🍣</span>
+                    <span id="score-val" class="font-bold text-red-300 text-sm">0</span>
+                </div>
+            </div>
+            
+            <!-- Sound Toggle -->
+        <button onclick="toggleAudio()" id="audio-btn" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm border border-slate-600">
+            🔊
+        </button>
+    </div>
+</div>
+
+    <!-- Main Canvas Viewport Area -->
+    <div class="relative w-full h-full flex-1 flex items-center justify-center p-1 sm:p-2 overflow-hidden">
+        <canvas id="gameCanvas" class="rounded-2xl shadow-2xl border-2 border-emerald-900/40 bg-emerald-500"></canvas>
+
+        <!-- Elden Ring Boss HP Banner (Moved to Bottom Side) -->
+        <div id="boss-hp-banner" class="hidden absolute bottom-4 z-20 w-full max-w-xl flex flex-col items-center px-4 glass-panel py-2 rounded-2xl shadow-2xl border border-red-500/40">
+            <div class="flex items-center space-x-2 mb-1">
+                <span class="text-amber-400 text-xs tracking-widest font-extrabold uppercase">⚔️ BOSS BATTLE ⚔️</span>
+                <span id="boss-name" class="text-red-400 font-black text-sm sm:text-base drop-shadow-md">MARGIT</span>
+            </div>
+            <div class="w-full h-4 bg-slate-900/90 border-2 border-red-700 rounded-full overflow-hidden shadow-2xl">
+                <div id="boss-hp-inner" class="h-full bg-gradient-to-r from-red-700 via-rose-500 to-amber-500 transition-all duration-200" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- START CHARACTER & WEAPON SELECTION OVERLAY -->
+        <div id="start-screen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-emerald-400 mb-1 tracking-wide">BOSS RUSH SURVIVAL</h1>
+            <p class="text-xs text-slate-300 mb-6 max-w-md">Defeat back-to-back Bosses in every stage!</p>
+            
+            <!-- Hero selection -->
+            <div class="text-left w-full max-w-2xl mb-2 text-xs font-bold text-emerald-300 uppercase tracking-wider">1. Choose Hero:</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl w-full mb-6">
+                <button onclick="pickInitialHero('kitty')" id="select-hero-kitty" class="hero-select-card glass-panel p-4 rounded-2xl border-2 border-pink-400 bg-pink-950/40 flex flex-col items-center group">
+                    <div class="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center text-2xl mb-2 shadow-lg">🎀</div>
+                    <div class="text-sm font-bold text-pink-300">Hello Kitty</div>
+                    <div class="text-[10px] text-slate-300">Wholesome Paladin</div>
+                </button>
+
+                <button onclick="pickInitialHero('pusheen')" id="select-hero-pusheen" class="hero-select-card glass-panel p-4 rounded-2xl border border-slate-700 opacity-70 flex flex-col items-center group">
+                    <div class="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-2xl mb-2 shadow-lg">🐾</div>
+                    <div class="text-sm font-bold text-slate-300">Pusheen</div>
+                    <div class="text-[10px] text-slate-300">Cozy Brawler</div>
+                </button>
+
+                <button onclick="pickInitialHero('hei')" id="select-hero-hei" class="hero-select-card glass-panel p-4 rounded-2xl border border-slate-700 opacity-70 flex flex-col items-center group">
+                    <div class="w-12 h-12 rounded-full bg-slate-900 border border-emerald-400 flex items-center justify-center text-2xl mb-2 shadow-lg">🐱</div>
+                    <div class="text-sm font-bold text-emerald-300">Hei</div>
+                    <div class="text-[10px] text-slate-300">Luo Xiaohei Cat</div>
+                </button>
+            </div>
+
+            <!-- Single Weapon selection -->
+            <div class="text-left w-full max-w-2xl mb-2 text-xs font-bold text-cyan-300 uppercase tracking-wider">2. Choose Primary Weapon:</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl w-full mb-6">
+                <button onclick="pickInitialWeapon('standard')" id="select-weap-standard" class="weap-select-card glass-panel p-3 rounded-xl border-2 border-pink-400 bg-pink-950/40 text-left">
+                    <div class="font-bold text-xs text-pink-200">🗡️ Normal Sword</div>
+                    <div class="text-[10px] text-slate-300">Balanced slash speed</div>
+                </button>
+                <button onclick="pickInitialWeapon('pen')" id="select-weap-pen" class="weap-select-card glass-panel p-3 rounded-xl border border-slate-700 opacity-70 text-left">
+                    <div class="font-bold text-xs text-cyan-200">🖊️ Nana's Pen</div>
+                    <div class="text-[10px] text-slate-300">Laser Beam (R-Click / E)</div>
+                </button>
+                <button onclick="pickInitialWeapon('redowan')" id="select-weap-redowan" class="weap-select-card glass-panel p-3 rounded-xl border border-slate-700 opacity-70 text-left">
+                    <div class="font-bold text-xs text-purple-300">⚔️ Redowan's Dark Sword</div>
+                    <div class="text-[10px] text-slate-300">100 Heavy DMG + Dark FX</div>
+                </button>
+            </div>
+
+            <button onclick="confirmStartGame()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-base rounded-xl shadow-xl transition transform hover:scale-105">
+                ENTER SURVIVAL FIELD ⚔️
+            </button>
+        </div>
+
+        <!-- Game Over / Level Clear Overlay -->
+        <div id="modal-overlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center">
+            <h2 id="modal-title" class="text-3xl font-extrabold text-amber-400 mb-2">Game Over</h2>
+            <p id="modal-desc" class="text-sm text-slate-300 mb-6 max-w-md">Your hero fell!</p>
+            <button id="modal-btn" onclick="restartGame()" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold rounded-xl shadow-lg transition transform hover:scale-105">
+                Play Again ⚔️
+            </button>
+        </div>
+
+        <!-- Controls Guide overlay (desktop) -->
+        <div class="hidden md:flex absolute bottom-3 left-4 text-[11px] text-emerald-200/80 glass-panel p-2 px-3 rounded-lg flex items-center space-x-3 pointer-events-none">
+            <span><b>WASD / Arrows</b>: Move</span>
+            <span>•</span>
+            <span><b>Left Click</b>: Sword Attack (*)</span>
+            <span>•</span>
+            <span><b>Right Click</b>: Nana's Pen Laser Beam 🖊️⚡</span>
+            <span>•</span>
+            <span><b>1, 2, 3</b>: Hero</span>
+        </div>
+    </div>
+
+    <!-- Touch Controls for Mobile -->
+    <div class="w-full max-w-4xl p-2 px-4 z-10 flex items-center justify-between pointer-events-auto md:hidden">
+        <div class="relative w-32 h-32 relative">
+            <button id="btn-up" class="touch-btn absolute top-0 left-11 w-10 h-10 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center text-xl">⬆️</button>
+            <button id="btn-left" class="touch-btn absolute top-11 left-0 w-10 h-10 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center text-xl">⬅️</button>
+            <button id="btn-right" class="touch-btn absolute top-11 right-0 w-10 h-10 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center text-xl">➡️</button>
+            <button id="btn-down" class="touch-btn absolute bottom-0 left-11 w-10 h-10 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center text-xl">⬇️</button>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button id="btn-attack" class="touch-btn w-20 h-20 rounded-full bg-gradient-to-br from-rose-500 to-red-600 border-4 border-rose-300 shadow-lg flex flex-col items-center justify-center active:scale-95 transition">
+                <span class="text-2xl">⚔️</span>
+                <span class="text-[10px] font-bold text-white uppercase tracking-wider">Attack</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Logic Engine -->
+    <script>
+        // --- Web Audio API Synthesizer ---
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx || audioCtx.state === 'suspended') {
+                audioCtx?.resume();
+            }
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            if (type === 'swing') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(350, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.12);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'dark_swing') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'laser') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.linearRampToValueAtTime(220, now + 0.4);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'hit') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'sushi') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(850, now + 0.08);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'switch') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('audio-btn').innerText = soundEnabled ? '🔊' : '🔇';
+        }
+
+        // --- Canvas & World Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        const WORLD_WIDTH = 1200;
+        const WORLD_HEIGHT = 800;
+
+        let currentLevel = 1;
+        let activeBoss = null;
+        let bonfireExit = null;
+        let chosenInitialHero = 'kitty';
+        let chosenInitialWeapon = 'standard';
+
+        let gameStarted = false;
+        let gameOver = false;
+        let currentHero = null;
+        let activeHeroKey = 'kitty';
+
+        let arrows = [];
+        let donuts = [];
+        let damagePopups = [];
+        let donutCount = 0;
+        let spawnTimer = 0;
+        let lastTime = 0;
+
+        function pickInitialHero(key) {
+            chosenInitialHero = key;
+            document.querySelectorAll('.hero-select-card').forEach(c => {
+                c.classList.add('opacity-70');
+                c.classList.remove('border-2', 'border-pink-400', 'border-emerald-400', 'bg-pink-950/40');
+            });
+            const card = document.getElementById(`select-hero-${key}`);
+            if (card) {
+                card.classList.remove('opacity-70');
+                card.classList.add('border-2', key === 'hei' ? 'border-emerald-400' : 'border-pink-400', 'bg-pink-950/40');
+            }
+        }
+
+        function pickInitialWeapon(mode) {
+            chosenInitialWeapon = mode;
+            document.querySelectorAll('.weap-select-card').forEach(c => {
+                c.classList.add('opacity-70');
+                c.classList.remove('border-2', 'border-pink-400', 'border-cyan-400', 'border-purple-400', 'bg-pink-950/40');
+            });
+            const card = document.getElementById(`select-weap-${mode}`);
+            if (card) {
+                card.classList.remove('opacity-70');
+                card.classList.add('border-2', mode === 'pen' ? 'border-cyan-400' : (mode === 'redowan' ? 'border-purple-400' : 'border-pink-400'), 'bg-pink-950/40');
+            }
+        }
+
+        function confirmStartGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            gameStarted = true;
+            switchCharacter(chosenInitialHero);
+            setWeapon(chosenInitialWeapon);
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const aspect = WORLD_WIDTH / WORLD_HEIGHT;
+            let w = container.clientWidth - 10;
+            let h = container.clientHeight - 10;
+
+            if (w / h > aspect) {
+                w = h * aspect;
+            } else {
+                h = w / aspect;
+            }
+
+            canvas.width = WORLD_WIDTH;
+            canvas.height = WORLD_HEIGHT;
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        let mouseWorldPos = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 };
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            mouseWorldPos.x = (e.clientX - rect.left) * scaleX;
+            mouseWorldPos.y = (e.clientY - rect.top) * scaleY;
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!gameStarted || gameOver) return;
+            if (e.button === 0) {
+                performAttack();
+            } else if (e.button === 2 && activeWeaponMode === 'pen') {
+                fireLaserBeam();
+            }
+        });
+
+        let activeWeaponMode = 'standard';
+        let laserCooldownTimer = 0;
+        const LASER_COOLDOWN_MAX = 5.0;
+
+        function setWeapon(mode) {
+            activeWeaponMode = mode;
+            const btnStd = document.getElementById('btn-weapon-std');
+            const btnPen = document.getElementById('btn-weapon-pen');
+            const btnRed = document.getElementById('btn-weapon-redowan');
+            const laserBox = document.getElementById('laser-cd-box');
+
+            [btnStd, btnPen, btnRed].forEach(b => b.classList.add('opacity-70'));
+            laserBox.classList.add('hidden');
+
+            if (mode === 'redowan') {
+                btnRed.classList.remove('opacity-70');
+            } else if (mode === 'pen') {
+                btnPen.classList.remove('opacity-70');
+                laserBox.classList.remove('hidden');
+            } else {
+                btnStd.classList.remove('opacity-70');
+            }
+            playSound('switch');
+        }
+
+        const keys = {};
+        const touchState = { up: false, down: false, left: false, right: false, attack: false };
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' || e.key === 'Spacebar') e.preventDefault();
+            if (e.key === '1') switchCharacter('kitty');
+            if (e.key === '2') switchCharacter('pusheen');
+            if (e.key === '3') switchCharacter('hei');
+            if (['j', 'J', ' '].includes(e.key) && gameStarted && !gameOver) performAttack();
+            if (['e', 'E'].includes(e.key) && gameStarted && !gameOver) fireLaserBeam();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function bindTouch(id, direction) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const start = (e) => { 
+                e.preventDefault(); 
+                touchState[direction] = true; 
+                if(direction==='attack' && gameStarted && !gameOver) performAttack(); 
+            };
+            const end = (e) => { e.preventDefault(); touchState[direction] = false; };
+            btn.addEventListener('touchstart', start, { passive: false });
+            btn.addEventListener('touchend', end, { passive: false });
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+        }
+
+        bindTouch('btn-up', 'up');
+        bindTouch('btn-down', 'down');
+        bindTouch('btn-left', 'left');
+        bindTouch('btn-right', 'right');
+        bindTouch('btn-attack', 'attack');
+
+        const CHAR_STATS = {
+            kitty: { name: 'Hello Kitty', maxHp: 120, speed: 4.2, attackPower: 30, color: '#f472b6' },
+            pusheen: { name: 'Pusheen', maxHp: 160, speed: 3.5, attackPower: 36, color: '#94a3b8' },
+            hei: { name: 'Hei', maxHp: 110, speed: 5.4, attackPower: 50, color: '#09090b' }
+        };
+
+        function switchCharacter(key) {
+            activeHeroKey = key;
+            const prevX = currentHero ? currentHero.x : WORLD_WIDTH / 2;
+            const prevY = currentHero ? currentHero.y : WORLD_HEIGHT / 2;
+            const prevHp = currentHero ? currentHero.hp : CHAR_STATS[key].maxHp;
+            
+            currentHero = new Character(key, prevX, prevY);
+            currentHero.hp = Math.min(prevHp, currentHero.maxHp);
+            playSound('switch');
+            updateHUD();
+        }
+
+        function performAttack() {
+            if (currentHero && !gameOver) {
+                currentHero.attack();
+            }
+        }
+
+        class Character {
+            constructor(key, x, y) {
+                this.key = key;
+                this.x = x;
+                this.y = y;
+                this.radius = 24;
+                this.hp = CHAR_STATS[key].maxHp;
+                this.maxHp = CHAR_STATS[key].maxHp;
+                this.speed = CHAR_STATS[key].speed;
+                this.facingAngle = 0;
+                this.isAttacking = false;
+                this.attackProgress = 0;
+                this.attackDuration = 0.2;
+                this.attackTimer = 0;
+                this.swordRange = 55;
+                this.invulnerableTimer = 0;
+            }
+
+            update(dt) {
+                if (this.invulnerableTimer > 0) this.invulnerableTimer -= dt;
+
+                let dx = 0;
+                let dy = 0;
+
+                if (keys['w'] || keys['arrowup'] || touchState.up) dy -= 1;
+                if (keys['s'] || keys['arrowdown'] || touchState.down) dy += 1;
+                if (keys['a'] || keys['arrowleft'] || touchState.left) dx -= 1;
+                if (keys['d'] || keys['arrowright'] || touchState.right) dx += 1;
+
+                if (dx !== 0 || dy !== 0) {
+                    const len = Math.hypot(dx, dy);
+                    dx /= len;
+                    dy /= len;
+                    this.x += dx * this.speed * 60 * dt;
+                    this.y += dy * this.speed * 60 * dt;
+                }
+
+                this.facingAngle = Math.atan2(mouseWorldPos.y - this.y, mouseWorldPos.x - this.x);
+
+                this.x = Math.max(35, Math.min(WORLD_WIDTH - 35, this.x));
+                this.y = Math.max(35, Math.min(WORLD_HEIGHT - 35, this.y));
+
+                if (this.isAttacking) {
+                    this.attackTimer += dt;
+                    this.attackProgress = this.attackTimer / this.attackDuration;
+                    if (this.attackProgress >= 1) {
+                        this.isAttacking = false;
+                        this.attackProgress = 0;
+                        this.attackTimer = 0;
+                    }
+                }
+            }
+
+            attack() {
+                if (this.isAttacking) return;
+                this.isAttacking = true;
+                this.attackProgress = 0;
+                this.attackTimer = 0;
+
+                const isRedowan = activeWeaponMode === 'redowan';
+                playSound(isRedowan ? 'dark_swing' : 'swing');
+
+                const currentRange = isRedowan ? 95 : this.swordRange;
+                const dmg = isRedowan ? 100 : (activeWeaponMode === 'pen' ? 35 : CHAR_STATS[this.key].attackPower);
+
+                if (activeBoss) {
+                    const dist = Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y);
+                    if (dist <= currentRange + activeBoss.radius + 20) {
+                        activeBoss.takeDamage(dmg);
+                    }
+                }
+
+                arrows.forEach(monster => {
+                    const dist = Math.hypot(monster.x - this.x, monster.y - this.y);
+                    if (dist <= currentRange + monster.radius + 15) {
+                        monster.takeDamage(dmg, this.facingAngle, isRedowan);
+                    }
+                });
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 60) % 2 === 0) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                ctx.fillStyle = 'rgba(0,0,0,0.25)';
+                ctx.beginPath();
+                ctx.ellipse(0, this.radius - 2, this.radius * 0.9, this.radius * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (this.key === 'kitty') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#334155'; ctx.lineWidth = 2.5; ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.moveTo(-16, -12); ctx.lineTo(-20, -26); ctx.lineTo(-6, -18); ctx.fill(); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(16, -12); ctx.lineTo(20, -26); ctx.lineTo(6, -18); ctx.fill(); ctx.stroke();
+
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath(); ctx.arc(-14, -18, 5, 0, Math.PI * 2); ctx.arc(-6, -20, 5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath(); ctx.arc(-10, -19, 3.5, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath(); ctx.arc(-7, -2, 2.5, 0, Math.PI * 2); ctx.arc(7, -2, 2.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath(); ctx.ellipse(0, 3, 2.5, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+
+                } else if (this.key === 'pusheen') {
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.beginPath(); ctx.ellipse(0, 0, this.radius + 3, this.radius - 2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#475569'; ctx.lineWidth = 2.5; ctx.stroke();
+
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.beginPath(); ctx.moveTo(-16, -10); ctx.lineTo(-18, -24); ctx.lineTo(-6, -14); ctx.fill(); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(16, -10); ctx.lineTo(18, -24); ctx.lineTo(6, -14); ctx.fill(); ctx.stroke();
+
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(-4, -17, 8, 3); ctx.fillRect(-10, -14, 4, 3); ctx.fillRect(6, -14, 4, 3);
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath(); ctx.arc(-8, -2, 2.5, 0, Math.PI * 2); ctx.arc(8, -2, 2.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.arc(-2, 3, 2.5, 0, Math.PI); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(2, 3, 2.5, 0, Math.PI); ctx.stroke();
+
+                } else if (this.key === 'hei') {
+                    ctx.fillStyle = '#111827';
+                    ctx.beginPath(); ctx.moveTo(-18, -8); ctx.lineTo(-24, -28); ctx.lineTo(-4, -16); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#bbf7d0';
+                    ctx.beginPath(); ctx.moveTo(-17, -10); ctx.lineTo(-21, -24); ctx.lineTo(-7, -15); ctx.closePath(); ctx.fill();
+
+                    ctx.fillStyle = '#111827';
+                    ctx.beginPath(); ctx.moveTo(18, -8); ctx.lineTo(24, -28); ctx.lineTo(4, -16); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#bbf7d0';
+                    ctx.beginPath(); ctx.moveTo(17, -10); ctx.lineTo(21, -24); ctx.lineTo(7, -15); ctx.closePath(); ctx.fill();
+
+                    ctx.fillStyle = '#111827';
+                    ctx.beginPath(); ctx.arc(0, 0, this.radius + 1, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.ellipse(-10, -3, 11, 13, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath(); ctx.ellipse(-10, -3, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.ellipse(10, -3, 11, 13, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath(); ctx.ellipse(10, -3, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath(); ctx.arc(0, 7, 2, 0, Math.PI * 2); ctx.fill();
+                }
+
+                this.drawWeapon(ctx);
+                ctx.restore();
+                this.drawHealthBar(ctx);
+            }
+
+            drawWeapon(ctx) {
+                ctx.save();
+                let swingAngle = 0;
+                if (this.isAttacking) {
+                    swingAngle = (-Math.PI / 3) + (this.attackProgress * (Math.PI * 2 / 3));
+                }
+
+                ctx.rotate(this.facingAngle + swingAngle);
+                ctx.translate(14, 4);
+
+                if (activeWeaponMode === 'redowan') {
+                    ctx.shadowColor = '#a855f7';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = '#09090b';
+                    ctx.strokeStyle = '#c084fc';
+                    ctx.lineWidth = 2.5;
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, -6); ctx.lineTo(55, -2); ctx.lineTo(65, 0); ctx.lineTo(55, 2); ctx.lineTo(0, 6);
+                    ctx.closePath();
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.fillStyle = '#a855f7'; ctx.fillRect(8, -1.5, 38, 3);
+                    ctx.fillStyle = '#581c87'; ctx.fillRect(-4, -12, 8, 24);
+
+                    if (this.isAttacking) {
+                        ctx.strokeStyle = 'rgba(168, 85, 247, 0.95)';
+                        ctx.lineWidth = 8;
+                        ctx.beginPath(); ctx.arc(15, 0, 58, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                    }
+                } else if (activeWeaponMode === 'pen') {
+                    ctx.fillStyle = '#06b6d4'; ctx.fillRect(0, -4, 30, 8);
+                    ctx.fillStyle = '#67e8f9'; ctx.beginPath(); ctx.arc(30, 0, 4, 0, Math.PI * 2); ctx.fill();
+
+                    if (this.isAttacking) {
+                        ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.arc(10, 0, 32, -Math.PI / 4, Math.PI / 4); ctx.stroke();
+                    }
+                } else {
+                    ctx.fillStyle = this.key === 'hei' ? '#38bdf8' : '#e2e8f0';
+                    ctx.strokeStyle = this.key === 'hei' ? '#0284c7' : '#64748b';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -3); ctx.lineTo(32, -1); ctx.lineTo(38, 0); ctx.lineTo(32, 1); ctx.lineTo(0, 3);
+                    ctx.closePath();
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.fillStyle = this.key === 'kitty' ? '#f43f5e' : (this.key === 'hei' ? '#10b981' : '#f59e0b');
+                    ctx.fillRect(-2, -6, 4, 12);
+
+                    if (this.isAttacking) {
+                        ctx.strokeStyle = this.key === 'hei' ? 'rgba(56, 189, 248, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath(); ctx.arc(10, 0, 32, -Math.PI / 4, Math.PI / 4); ctx.stroke();
+                    }
+                }
+                ctx.restore();
+            }
+
+            drawHealthBar(ctx) {
+                if (this.hp >= this.maxHp) return;
+                const w = 40; const h = 5;
+                const x = this.x - w / 2;
+                const y = this.y - this.radius - 14;
+
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.7)'; ctx.fillRect(x, y, w, h);
+                ctx.fillStyle = '#10b981'; ctx.fillRect(x, y, (this.hp / this.maxHp) * w, h);
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h);
+            }
+        }
+
+        let activeLaserBeam = null;
+
+        function fireLaserBeam() {
+            if (laserCooldownTimer > 0 || !currentHero) return;
+
+            laserCooldownTimer = LASER_COOLDOWN_MAX;
+            playSound('laser');
+
+            const angle = currentHero.facingAngle;
+            activeLaserBeam = { startX: currentHero.x, startY: currentHero.y, angle: angle, timer: 0.5, maxTimer: 0.5 };
+
+            const beamLength = 800;
+            const endX = currentHero.x + Math.cos(angle) * beamLength;
+            const endY = currentHero.y + Math.sin(angle) * beamLength;
+
+            if (activeBoss) {
+                const num = Math.abs((endY - currentHero.y) * activeBoss.x - (endX - currentHero.x) * activeBoss.y + endX * currentHero.y - endY * currentHero.x);
+                const den = Math.hypot(endY - currentHero.y, endX - currentHero.x);
+                if (num / den < activeBoss.radius + 28) activeBoss.takeDamage(120);
+            }
+
+            arrows.forEach(arrow => {
+                const num = Math.abs((endY - currentHero.y) * arrow.x - (endX - currentHero.x) * arrow.y + endX * currentHero.y - endY * currentHero.x);
+                const den = Math.hypot(endY - currentHero.y, endX - currentHero.x);
+                const dist = num / den;
+                const dot = (arrow.x - currentHero.x) * Math.cos(angle) + (arrow.y - currentHero.y) * Math.sin(angle);
+
+                if (dist < arrow.radius + 28 && dot > 0) {
+                    arrow.takeDamage(120, angle, false, true);
+                }
+            });
+        }
+
+        function updateLaserBeam(dt) {
+            if (laserCooldownTimer > 0) {
+                laserCooldownTimer = Math.max(0, laserCooldownTimer - dt);
+                const pct = ((LASER_COOLDOWN_MAX - laserCooldownTimer) / LASER_COOLDOWN_MAX) * 100;
+                document.getElementById('laser-cd-bar').style.width = `${pct}%`;
+            }
+
+            if (activeLaserBeam) {
+                activeLaserBeam.timer -= dt;
+                if (activeLaserBeam.timer <= 0) activeLaserBeam = null;
+            }
+        }
+
+        function drawLaserBeam(ctx) {
+            if (!activeLaserBeam || !currentHero) return;
+            const alpha = activeLaserBeam.timer / activeLaserBeam.maxTimer;
+            const angle = activeLaserBeam.angle;
+            const endX = currentHero.x + Math.cos(angle) * 900;
+            const endY = currentHero.y + Math.sin(angle) * 900;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)'; ctx.lineWidth = 30;
+            ctx.beginPath(); ctx.moveTo(currentHero.x, currentHero.y); ctx.lineTo(endX, endY); ctx.stroke();
+
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10;
+            ctx.beginPath(); ctx.moveTo(currentHero.x, currentHero.y); ctx.lineTo(endX, endY); ctx.stroke();
+            ctx.restore();
+        }
+
+        class ArrowMonster {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.radius = 16; this.hp = 30; this.maxHp = this.hp; this.speed = 2.8; this.angle = 0;
+            }
+            update(dt, hero) {
+                if (hero) {
+                    const dx = hero.x - this.x; const dy = hero.y - this.y;
+                    this.angle = Math.atan2(dy, dx);
+                    this.x += Math.cos(this.angle) * this.speed * 60 * dt;
+                    this.y += Math.sin(this.angle) * this.speed * 60 * dt;
+
+                    if (Math.hypot(dx, dy) < this.radius + hero.radius && hero.invulnerableTimer <= 0) {
+                        hero.hp = Math.max(0, hero.hp - 15);
+                        hero.invulnerableTimer = 0.8;
+                        playSound('hit'); updateHUD();
+                        if (hero.hp <= 0) triggerGameOver();
+                    }
+                }
+            }
+            takeDamage(amount) {
+                this.hp -= amount; playSound('hit');
+                createDamagePopup(this.x, this.y - 10, `* -${amount} *`, '#fef08a');
+                if (this.hp <= 0) donuts.push(new Sushi(this.x, this.y));
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -10); ctx.lineTo(-6, 0); ctx.lineTo(-12, 10); ctx.closePath(); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class GummyBear {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.radius = 22; this.hp = 65; this.maxHp = 65; this.speed = 1.8; this.angle = 0;
+            }
+            update(dt, hero) {
+                if (hero) {
+                    const dx = hero.x - this.x; const dy = hero.y - this.y;
+                    this.angle = Math.atan2(dy, dx);
+                    this.x += Math.cos(this.angle) * this.speed * 60 * dt;
+                    this.y += Math.sin(this.angle) * this.speed * 60 * dt;
+                    if (Math.hypot(dx, dy) < this.radius + hero.radius && hero.invulnerableTimer <= 0) {
+                        hero.hp = Math.max(0, hero.hp - 18);
+                        hero.invulnerableTimer = 0.8;
+                        playSound('hit'); updateHUD();
+                        if (hero.hp <= 0) triggerGameOver();
+                    }
+                }
+            }
+            takeDamage(amount) {
+                this.hp -= amount; playSound('hit');
+                createDamagePopup(this.x, this.y - 10, `* -${amount} *`, '#86efac');
+                if (this.hp <= 0) donuts.push(new Sushi(this.x, this.y));
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#86efac'; ctx.beginPath(); ctx.arc(-8, -14, 6, 0, Math.PI * 2); ctx.arc(8, -14, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class ShadowWisp {
+            constructor(x, y, dirAngle = null) {
+                this.x = x; this.y = y; this.radius = 12; this.hp = 25; this.maxHp = 25; this.speed = 3.4;
+                this.angle = dirAngle !== null ? dirAngle : Math.random() * Math.PI * 2;
+            }
+            update(dt, hero) {
+                this.x += Math.cos(this.angle) * this.speed * 60 * dt;
+                this.y += Math.sin(this.angle) * this.speed * 60 * dt;
+                if (hero && Math.hypot(hero.x - this.x, hero.y - this.y) < this.radius + hero.radius && hero.invulnerableTimer <= 0) {
+                    hero.hp = Math.max(0, hero.hp - 12);
+                    hero.invulnerableTimer = 0.8;
+                    playSound('hit'); updateHUD();
+                    if (hero.hp <= 0) triggerGameOver();
+                }
+            }
+            takeDamage(amount) {
+                this.hp -= amount; playSound('hit');
+                if (this.hp <= 0 && Math.random() < 0.5) donuts.push(new Sushi(this.x, this.y));
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = '#7c3aed'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- Custom Boss Projectiles for Unique Visual FX ---
+        class BossAttackFX {
+            constructor(x, y, angle, style = 'dagger', speed = 4.0) {
+                this.x = x; this.y = y; this.radius = 12; this.hp = 1; this.speed = speed;
+                this.angle = angle; this.style = style;
+            }
+            update(dt, hero) {
+                this.x += Math.cos(this.angle) * this.speed * 60 * dt;
+                this.y += Math.sin(this.angle) * this.speed * 60 * dt;
+                if (hero && Math.hypot(hero.x - this.x, hero.y - this.y) < this.radius + hero.radius && hero.invulnerableTimer <= 0) {
+                    hero.hp = Math.max(0, hero.hp - 14);
+                    hero.invulnerableTimer = 0.8;
+                    playSound('hit'); updateHUD();
+                    if (hero.hp <= 0) triggerGameOver();
+                }
+            }
+            takeDamage(amount) {
+                this.hp -= amount;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+                if (this.style === 'dagger') {
+                    // Golden Daggers (Margit)
+                    ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-10, -6); ctx.lineTo(-10, 6); ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#eab308'; ctx.lineWidth = 2; ctx.stroke();
+                } else if (this.style === 'fire') {
+                    // Magma/Flame Torrent (Godrick / Rykard / Fire Giant / Bayle)
+                    ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+                } else if (this.style === 'meteor') {
+                    // Burning Meteors (Radahn)
+                    ctx.fillStyle = '#7e22ce'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#c084fc'; ctx.beginPath(); ctx.arc(-3, -3, 6, 0, Math.PI * 2); ctx.fill();
+                } else if (this.style === 'blood') {
+                    // Accursed Blood Slashes (Morgott / Mohg / Maliketh)
+                    ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.ellipse(0, 0, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 2; ctx.stroke();
+                } else if (this.style === 'bloom') {
+                    // Scarlet Rot Bloom Petals (Malenia)
+                    ctx.fillStyle = '#f43f5e'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+                } else if (this.style === 'holy_ring') {
+                    // Golden Rings & Sacred Light (Radagon / Elden Beast / Placidusax)
+                    ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.stroke();
+                    ctx.fillStyle = '#eab308'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    // Default energy orb
+                    ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class EldenBoss {
+            constructor(type) {
+                this.type = type;
+                this.x = WORLD_WIDTH / 2;
+                this.y = 180;
+                this.isPhase2 = false;
+                this.phase2Triggered = false;
+                this.phase2AnimationTimer = 0;
+
+                // Stats for all 14 bosses
+                const bossStats = {
+                    margit: { name: 'MARGIT THE FELL OMEN', hp: 350, speed: 2.5 },
+                    godrick: { name: 'GODRICK THE GRAFTED', hp: 550, speed: 2.2 },
+                    radahn: { name: 'STARSCOURGE RADAHN', hp: 750, speed: 2.4 },
+                    rykard: { name: 'LORD OF BLASPHEMY RYKARD', hp: 950, speed: 1.8 },
+                    morgott: { name: 'MORGOTT THE OMEN KING', hp: 1100, speed: 3.2 },
+                    fire_giant: { name: 'FIRE GIANT', hp: 1350, speed: 1.5 },
+                    malenia: { name: 'MALENIA BLADE OF MIQUELLA', hp: 1600, speed: 3.8 },
+                    godfrey: { name: 'GODFREY FIRST ELDEN LORD', hp: 1800, speed: 3.0 },
+                    radagon: { name: 'RADAGON OF THE GOLDEN ORDER', hp: 2000, speed: 3.4 },
+                    elden_beast: { name: 'ELDEN BEAST', hp: 2300, speed: 2.0 },
+                    mohg: { name: 'MOHG LORD OF BLOOD', hp: 2600, speed: 2.6 },
+                    maliketh: { name: 'MALIKETH THE BLACK BLADE', hp: 2900, speed: 4.0 },
+                    placidusax: { name: 'DRAGONLORD PLACIDUSAX', hp: 3200, speed: 1.9 },
+                    bayle: { name: 'BAYLE THE DREAD', hp: 3600, speed: 3.6 }
+                };
+
+                const info = bossStats[type] || bossStats['margit'];
+                this.maxHp = info.hp;
+                this.hp = this.maxHp;
+                this.speed = info.speed;
+                this.baseSpeed = info.speed;
+                this.radius = (type === 'radahn' || type === 'elden_beast' || type === 'placidusax' || type === 'bayle') ? 52 : (type === 'godfrey' || type === 'fire_giant' ? 44 : 38);
+                this.name = info.name;
+                this.attackTimer = 0;
+                this.angle = 0;
+
+                document.getElementById('boss-name').innerText = this.name;
+                document.getElementById('boss-hp-banner').classList.remove('hidden');
+                document.getElementById('boss-hp-inner').style.width = '100%';
+            }
+
+            update(dt, hero) {
+                if (!hero) return;
+
+                // Handle Phase 2 Transformation Burst Animation & Form Change
+                if (this.hp <= this.maxHp * 0.5 && !this.phase2Triggered) {
+                    this.phase2Triggered = true;
+                    this.isPhase2 = true;
+                    this.phase2AnimationTimer = 1.2;
+                    this.speed = this.baseSpeed * 1.5;
+                    this.radius += 10; // Boss expands in Phase 2!
+                    playSound('dark_swing');
+                    createDamagePopup(this.x, this.y - 50, `🔥 PHASE 2 TRANSFORMATION: ${this.name}! 🔥`, '#ef4444');
+                }
+
+                if (this.phase2AnimationTimer > 0) {
+                    this.phase2AnimationTimer -= dt;
+                    if (Math.random() < 0.7) {
+                        arrows.push(new ShadowWisp(this.x, this.y, Math.random() * Math.PI * 2));
+                    }
+                    return;
+                }
+
+                const dx = hero.x - this.x; const dy = hero.y - this.y;
+                const dist = Math.hypot(dx, dy);
+                this.angle = Math.atan2(dy, dx);
+
+                if (dist > 15) {
+                    this.x += Math.cos(this.angle) * this.speed * 60 * dt;
+                    this.y += Math.sin(this.angle) * this.speed * 60 * dt;
+                }
+
+                if (dist < this.radius + hero.radius && hero.invulnerableTimer <= 0) {
+                    const dmg = this.isPhase2 ? 32 : 20;
+                    hero.hp = Math.max(0, hero.hp - dmg);
+                    hero.invulnerableTimer = 0.8;
+                    playSound('hit'); createDamagePopup(hero.x, hero.y - 15, `-${dmg} BOSS HIT!`, '#ef4444');
+                    updateHUD();
+                    if (hero.hp <= 0) triggerGameOver();
+                }
+
+                this.attackTimer += dt;
+                const cooldown = this.isPhase2 ? 1.4 : 2.4;
+
+                if (this.attackTimer > cooldown) {
+                    this.attackTimer = 0;
+                    
+                    // --- UNIQUE PHASE 1 & PHASE 2 ATTACK FX FOR ALL 14 BOSSES ---
+                    if (this.type === 'margit') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '⚡ PHASE 2: GIANT GOLDEN HAMMER SMASH!', '#fde047');
+                            this.x += Math.cos(this.angle) * 160; this.y += Math.sin(this.angle) * 160;
+                            for (let i = 0; i < 12; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 12) * i, 'holy_ring', 4.5));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🗡️ FELL DAGGER THROW!', '#fef08a');
+                            for (let i = -1; i <= 1; i++) arrows.push(new BossAttackFX(this.x, this.y, this.angle + i * 0.35, 'dagger', 5.0));
+                        }
+                    } else if (this.type === 'godrick') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🐉 PHASE 2: GRAFTED DRAGON ROAR & FLAME TORRENT!', '#f97316');
+                            for (let i = 0; i < 14; i++) arrows.push(new BossAttackFX(this.x, this.y, this.angle + (Math.random() * 1.2 - 0.6), 'fire', 4.2));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🌪️ COMMANDING WINDS!', '#86efac');
+                            for (let i = 0; i < 6; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 6) * i, 'dagger', 3.5));
+                        }
+                    } else if (this.type === 'radahn') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '☄️ PHASE 2: BURNING METEOR CRASH FROM SKIES!', '#c084fc');
+                            this.x = hero.x + (Math.random() * 100 - 50); this.y = hero.y - 120;
+                            for (let i = 0; i < 10; i++) arrows.push(new BossAttackFX(this.x, this.y, Math.random() * Math.PI * 2, 'meteor', 4.8));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🌌 GRAVITY ORB WAVE!', '#a855f7');
+                            hero.x = (hero.x + this.x) / 2; hero.y = (hero.y + this.y) / 2;
+                        }
+                    } else if (this.type === 'rykard') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '💀 PHASE 2: RYKARD\'S RANCOR RAIN OF SKULLS!', '#ef4444');
+                            for (let i = 0; i < 16; i++) arrows.push(new BossAttackFX(this.x, this.y, Math.random() * Math.PI * 2, 'fire', 3.8));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🐍 SERPENT MAGMA POOL!', '#ea580c');
+                            for (let i = 0; i < 6; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 6) * i, 'fire', 3.2));
+                        }
+                    } else if (this.type === 'morgott') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🩸 PHASE 2: ACCURSED BLOOD FLAME ERUPTION!', '#b91c1c');
+                            this.x += Math.cos(this.angle) * 200; this.y += Math.sin(this.angle) * 200;
+                            for (let i = 0; i < 12; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 12) * i, 'blood', 4.6));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '⚔️ HOLY SWORD RAIN!', '#fde047');
+                            for (let i = 0; i < 6; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 6) * i, 'dagger', 4.0));
+                        }
+                    } else if (this.type === 'fire_giant') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '👁️ PHASE 2: FELL GOD CHEST EYE BLAST!', '#dc2626');
+                            for (let i = 0; i < 15; i++) arrows.push(new BossAttackFX(this.x, this.y, this.angle + (Math.random() * 1.5 - 0.75), 'fire', 4.5));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🛡️ SNOW BASIN SLAM!', '#e2e8f0');
+                            this.x += Math.cos(this.angle) * 100; this.y += Math.sin(this.angle) * 100;
+                        }
+                    } else if (this.type === 'malenia') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🪷 PHASE 2: GODDESS OF ROT SCARLET BLOOM!', '#f43f5e');
+                            this.x = hero.x; this.y = hero.y;
+                            for (let i = 0; i < 18; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 18) * i, 'bloom', 5.0));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🌺 WATERFOWL DANCE SLASH!', '#fb7185');
+                            this.x += Math.cos(this.angle) * 180; this.y += Math.sin(this.angle) * 180;
+                        }
+                    } else if (this.type === 'godfrey') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🦁 PHASE 2: HOARAH LOUX WARRIOR GRAB & EARTH SHATTER!', '#f59e0b');
+                            this.x += Math.cos(this.angle) * 220; this.y += Math.sin(this.angle) * 220;
+                            for (let i = 0; i < 12; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 12) * i, 'meteor', 4.4));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🪓 AXE EARTHQUAKE STOMP!', '#d97706');
+                            for (let i = 0; i < 8; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 8) * i, 'fire', 3.6));
+                        }
+                    } else if (this.type === 'radagon') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🔨 PHASE 2: TRIPLE GOLDEN RING HAMMER SLAM!', '#eab308');
+                            for (let ring = 1; ring <= 3; ring++) {
+                                for (let i = 0; i < 6; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 6) * i, 'holy_ring', 4.5));
+                            }
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '✨ GOLDEN LIGHTNING BOLT!', '#fef08a');
+                            for (let i = 0; i < 5; i++) arrows.push(new BossAttackFX(this.x, this.y, this.angle + (i - 2) * 0.2, 'holy_ring', 5.0));
+                        }
+                    } else if (this.type === 'elden_beast') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🌌 PHASE 2: ELDEN STARS & COSMIC WAVE RINGS!', '#38bdf8');
+                            for (let i = 0; i < 20; i++) arrows.push(new BossAttackFX(this.x, this.y, Math.random() * Math.PI * 2, 'holy_ring', 3.5));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🗡️ SACRED SWORD LIGHT ARCS!', '#7dd3fc');
+                            for (let i = 0; i < 8; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 8) * i, 'holy_ring', 4.0));
+                        }
+                    } else if (this.type === 'mohg') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🩸 PHASE 2: NIHIL! NIHIL! BLOOD BOIL WINGS!', '#991b1b');
+                            hero.hp = Math.max(1, hero.hp - 20); updateHUD();
+                            for (let i = 0; i < 14; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 14) * i, 'blood', 4.5));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🔱 TRIDENT BLOOD FLAME SLICE!', '#dc2626');
+                            for (let i = 0; i < 6; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 6) * i, 'blood', 3.8));
+                        }
+                    } else if (this.type === 'maliketh') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🗡️ PHASE 2: BLACK BLADE DESTINED DEATH SLASHES!', '#09090b');
+                            this.x += Math.cos(this.angle) * 250; this.y += Math.sin(this.angle) * 250;
+                            for (let i = 0; i < 12; i++) arrows.push(new BossAttackFX(this.x, this.y, Math.random() * Math.PI * 2, 'blood', 5.2));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🪨 BEAST CLAW ROCK BURST!', '#78350f');
+                            for (let i = 0; i < 6; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 6) * i, 'dagger', 4.2));
+                        }
+                    } else if (this.type === 'placidusax') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '⚡ PHASE 2: ANCIENT DRAGON LIGHTNING NUKES!', '#fef08a');
+                            this.x = hero.x + (Math.random() * 120 - 60); this.y = hero.y + (Math.random() * 120 - 60);
+                            for (let i = 0; i < 16; i++) arrows.push(new BossAttackFX(this.x, this.y, Math.random() * Math.PI * 2, 'holy_ring', 4.8));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🐉 DRAGON GOLDEN BREATH!', '#f59e0b');
+                            for (let i = 0; i < 8; i++) arrows.push(new BossAttackFX(this.x, this.y, (Math.PI * 2 / 8) * i, 'fire', 4.0));
+                        }
+                    } else if (this.type === 'bayle') {
+                        if (this.isPhase2) {
+                            createDamagePopup(this.x, this.y - 40, '🌋 PHASE 2: BAYLE THE DREAD WINGED MAGMA STORM!', '#7f1d1d');
+                            for (let i = 0; i < 22; i++) arrows.push(new BossAttackFX(this.x, this.y, Math.random() * Math.PI * 2, 'fire', 4.8));
+                        } else {
+                            createDamagePopup(this.x, this.y - 40, '🔥 VILE BAYLE DRAGON CRUSH!', '#b91c1c');
+                            this.x += Math.cos(this.angle) * 180; this.y += Math.sin(this.angle) * 180;
+                        }
+                    }
+                }
+            }
+
+            takeDamage(amount) {
+                this.hp -= amount; playSound('hit');
+                createDamagePopup(this.x, this.y - 20, `💥 -${amount}`, '#fbbf24');
+                const pct = Math.max(0, (this.hp / this.maxHp) * 100);
+                document.getElementById('boss-hp-inner').style.width = `${pct}%`;
+
+                if (this.hp <= 0) {
+                    document.getElementById('boss-hp-banner').classList.add('hidden');
+                    createDamagePopup(this.x, this.y, `🏆 ${this.name} DEFEATED!`, '#f59e0b');
+                    for (let i = 0; i < 8; i++) {
+                        donuts.push(new Sushi(this.x + (Math.random() * 60 - 30), this.y + (Math.random() * 60 - 30)));
+                    }
+                    activeBoss = null;
+                    spawnBonfireExit();
+                }
+            }
+
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+
+                // Distinct Phase 1 & Phase 2 Colors & Visual Transformations for all 14 Bosses!
+                let primaryColor = '#451a03';
+                let strokeColor = '#fde047';
+                let auraColor = 'rgba(239, 68, 68, 0.2)';
+
+                if (this.type === 'malenia') {
+                    primaryColor = this.isPhase2 ? '#be123c' : '#9f1239';
+                    strokeColor = this.isPhase2 ? '#fda4af' : '#fb7185';
+                    auraColor = this.isPhase2 ? 'rgba(244, 63, 94, 0.5)' : 'rgba(251, 113, 133, 0.25)';
+                } else if (this.type === 'radahn') {
+                    primaryColor = this.isPhase2 ? '#3b0764' : '#581c87';
+                    strokeColor = this.isPhase2 ? '#e9d5ff' : '#a855f7';
+                    auraColor = this.isPhase2 ? 'rgba(168, 85, 247, 0.5)' : 'rgba(168, 85, 247, 0.25)';
+                } else if (this.type === 'elden_beast') {
+                    primaryColor = this.isPhase2 ? '#0369a1' : '#0284c7';
+                    strokeColor = this.isPhase2 ? '#bae6fd' : '#38bdf8';
+                    auraColor = this.isPhase2 ? 'rgba(56, 189, 248, 0.55)' : 'rgba(56, 189, 248, 0.25)';
+                } else if (this.type === 'mohg' || this.type === 'maliketh') {
+                    primaryColor = this.isPhase2 ? '#000000' : '#450a0a';
+                    strokeColor = this.isPhase2 ? '#ef4444' : '#f87171';
+                    auraColor = this.isPhase2 ? 'rgba(220, 38, 38, 0.6)' : 'rgba(220, 38, 38, 0.25)';
+                } else if (this.type === 'bayle' || this.type === 'rykard') {
+                    primaryColor = this.isPhase2 ? '#991b1b' : '#78350f';
+                    strokeColor = this.isPhase2 ? '#f97316' : '#fbbf24';
+                    auraColor = this.isPhase2 ? 'rgba(249, 115, 22, 0.6)' : 'rgba(249, 115, 22, 0.25)';
+                } else if (this.type === 'radagon' || this.type === 'godfrey') {
+                    primaryColor = this.isPhase2 ? '#854d0e' : '#713f12';
+                    strokeColor = this.isPhase2 ? '#fef08a' : '#fde047';
+                    auraColor = this.isPhase2 ? 'rgba(234, 179, 8, 0.55)' : 'rgba(234, 179, 8, 0.25)';
+                }
+
+                // Render Phase 2 Dynamic Aura & Pulse
+                const pulse = Math.sin(Date.now() * 0.01) * 8;
+                ctx.fillStyle = auraColor;
+                ctx.beginPath(); ctx.arc(0, 0, this.radius + (this.isPhase2 ? 24 : 12) + pulse, 0, Math.PI * 2); ctx.fill();
+
+                if (this.isPhase2) {
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = primaryColor;
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = strokeColor; ctx.lineWidth = 4; ctx.stroke();
+
+                // Distinct Face / Helmet detail for Phase 2 vs Phase 1
+                ctx.fillStyle = strokeColor;
+                if (this.isPhase2) {
+                    ctx.beginPath(); ctx.arc(-10, -8, 6, 0, Math.PI * 2); ctx.arc(10, -8, 6, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath(); ctx.arc(-10, -8, 3, 0, Math.PI * 2); ctx.arc(10, -8, 3, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.arc(-8, -6, 4, 0, Math.PI * 2); ctx.arc(8, -6, 4, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Sushi {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.radius = 12;
+            }
+            update(dt, hero) {
+                if (hero) {
+                    if (Math.hypot(hero.x - this.x, hero.y - this.y) < this.radius + hero.radius) {
+                        hero.hp = Math.min(hero.maxHp, hero.hp + 15);
+                        donutCount++; playSound('sushi'); updateHUD();
+                        createDamagePopup(this.x, this.y, '+15 HP 🍣', '#86efac');
+                        return true;
+                    }
+                }
+                return false;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.font = '18px sans-serif'; ctx.fillText('🍣', -9, 6);
+                ctx.restore();
+            }
+        }
+
+        function createDamagePopup(x, y, text, color = '#fef08a') {
+            damagePopups.push({ x, y, text, color, timer: 0.8, maxTimer: 0.8 });
+        }
+
+        function updatePopups(dt) {
+            damagePopups.forEach(p => { p.y -= 20 * dt; p.timer -= dt; });
+            damagePopups = damagePopups.filter(p => p.timer > 0);
+        }
+
+        function drawPopups(ctx) {
+            damagePopups.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.timer / p.maxTimer;
+                ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = p.color;
+                ctx.fillText(p.text, p.x - 15, p.y);
+                ctx.restore();
+            });
+        }
+
+        function spawnBonfireExit() {
+            bonfireExit = {
+                x: WORLD_WIDTH / 2,
+                y: WORLD_HEIGHT / 2,
+                radius: 28,
+                lit: true
+            };
+        }
+
+        function updateBonfire(dt) {
+            if (!bonfireExit || !currentHero) return;
+            const dist = Math.hypot(currentHero.x - bonfireExit.x, currentHero.y - bonfireExit.y);
+            if (dist < currentHero.radius + bonfireExit.radius) {
+                // Rest at Bonfire and Advance Stage
+                currentHero.hp = currentHero.maxHp;
+                currentLevel++;
+                bonfireExit = null;
+                playSound('sushi');
+                updateHUD();
+                startLevel(currentLevel);
+            }
+        }
+
+        function drawBonfire(ctx) {
+            if (!bonfireExit) return;
+            ctx.save();
+            ctx.translate(bonfireExit.x, bonfireExit.y);
+
+            // Glow Aura
+            const glow = Math.sin(Date.now() * 0.008) * 6;
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.3)';
+            ctx.beginPath(); ctx.arc(0, 0, bonfireExit.radius + 15 + glow, 0, Math.PI * 2); ctx.fill();
+
+            // Sword in bonfire
+            ctx.fillStyle = '#64748b'; ctx.fillRect(-2, -26, 4, 20);
+            ctx.fillStyle = '#f59e0b'; ctx.fillRect(-6, -18, 12, 3);
+
+            // Fire icon
+            ctx.font = '28px sans-serif';
+            ctx.fillText('🔥', -14, 12);
+
+            // Text hint
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillStyle = '#fde047';
+            ctx.fillText('REST AT BONFIRE (NEXT LEVEL)', -85, -34);
+            ctx.restore();
+        }
+
+        const BOSS_SEQUENCE = [
+            'margit', 'godrick', 'radahn', 'rykard', 'morgott', 'fire_giant', 'malenia',
+            'godfrey', 'radagon', 'elden_beast', 'mohg', 'maliketh', 'placidusax', 'bayle'
+        ];
+
+        function startLevel(lvl) {
+            arrows = [];
+            donuts = [];
+            damagePopups = [];
+            bonfireExit = null;
+            document.getElementById('level-num').innerText = lvl;
+
+            const bossType = BOSS_SEQUENCE[(lvl - 1) % BOSS_SEQUENCE.length];
+            activeBoss = new EldenBoss(bossType);
+            createDamagePopup(WORLD_WIDTH / 2, 100, `⚔️ STAGE ${lvl}: ${activeBoss.name} APPEARS!`, '#ef4444');
+        }
+
+        function updateHUD() {
+            if (!currentHero) return;
+            document.getElementById('active-name').innerText = CHAR_STATS[activeHeroKey].name;
+            document.getElementById('hp-text').innerText = `${Math.ceil(currentHero.hp)}/${currentHero.maxHp}`;
+            document.getElementById('score-val').innerText = donutCount;
+
+            const pct = Math.max(0, (currentHero.hp / currentHero.maxHp) * 100);
+            const bar = document.getElementById('hp-bar-inner');
+            bar.style.width = `${pct}%`;
+
+            if (pct < 30) {
+                bar.className = 'h-full bg-red-500 transition-all duration-200';
+            } else if (pct < 60) {
+                bar.className = 'h-full bg-amber-500 transition-all duration-200';
+            } else {
+                bar.className = 'h-full bg-emerald-500 transition-all duration-200';
+            }
+
+            ['kitty', 'pusheen', 'hei'].forEach(k => {
+                const btn = document.getElementById(`btn-${k}`);
+                if (btn) {
+                    if (k === activeHeroKey) {
+                        btn.classList.remove('opacity-60');
+                    } else {
+                        btn.classList.add('opacity-60');
+                    }
+                }
+            });
+        }
+
+        function triggerGameOver() {
+            gameOver = true;
+            document.getElementById('modal-title').innerText = 'YOU DIED';
+            document.getElementById('modal-title').className = 'text-4xl font-black text-red-500 mb-2 tracking-widest';
+            document.getElementById('modal-desc').innerText = `Defeated on Stage ${currentLevel} by ${activeBoss ? activeBoss.name : 'a boss'}. Total Sushi Collected: ${donutCount} 🍣`;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            gameOver = false;
+            currentLevel = 1;
+            donutCount = 0;
+            document.getElementById('modal-overlay').classList.add('hidden');
+            switchCharacter(chosenInitialHero);
+            startLevel(1);
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            if (gameStarted && !gameOver) {
+                // Clear background with solid green field
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+                updateLaserBeam(dt);
+
+                if (currentHero) {
+                    currentHero.update(dt);
+                    currentHero.draw(ctx);
+                }
+
+                if (activeBoss) {
+                    activeBoss.update(dt, currentHero);
+                    activeBoss.draw(ctx);
+                }
+
+                updateBonfire(dt);
+                drawBonfire(ctx);
+
+                arrows.forEach(m => { m.update(dt, currentHero); m.draw(ctx); });
+                arrows = arrows.filter(m => m.hp > 0);
+
+                donuts = donuts.filter(d => {
+                    const picked = d.update(dt, currentHero);
+                    if (!picked) d.draw(ctx);
+                    return !picked;
+                });
+
+                drawLaserBeam(ctx);
+                updatePopups(dt);
+                drawPopups(ctx);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            resizeCanvas();
+            switchCharacter('kitty');
+            startLevel(1);
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
